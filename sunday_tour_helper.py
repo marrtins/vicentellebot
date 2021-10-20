@@ -78,14 +78,12 @@ class SundayTourHelper(CommonHelper):
 
     def finish_voting(self, update, context):
         user_full_name, user_id = self.get_user_values_from_message(update)
-        step_value = update.message.text
-        logger.info("STEP4 for %s: %s", user_full_name, step_value)
         average = str(sum(self.user_values[user_id]) / 4)
         update.message.reply_text(
             "Gracias por tu aporte a la democracia, el promedio final es: %s" % average
         )
         self.persist_vote(
-            self.current_fecha_nr, user_full_name, "Promedio Final", step_value
+            self.current_fecha_nr, user_full_name, "Promedio Final", average
         )
         return ConversationHandler.END
 
