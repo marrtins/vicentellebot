@@ -70,7 +70,7 @@ class SundayTourHelper(CommonHelper):
         )
         if step == STEP5:
             return self.finish_voting(update, context)
-        update.message.reply_text(
+        context.bot.send_message(update.message.chat_id,
             "Siguiente pregunta: \n <b>%s</b> " % tour_questions[step],
             parse_mode=ParseMode.HTML,
         )
@@ -79,7 +79,7 @@ class SundayTourHelper(CommonHelper):
     def finish_voting(self, update, context):
         user_full_name, user_id = self.get_user_values_from_message(update)
         average = str(sum(self.user_values[user_id]) / 4)
-        update.message.reply_text(
+        context.bot.send_message(update.message.chat_id,
             "Gracias por tu aporte a la democracia, el promedio final es: %s" % average
         )
         self.persist_vote(

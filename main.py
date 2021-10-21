@@ -60,7 +60,7 @@ def sunday_tour_handler(update, context):
     helper = SundayTourHelper()
     fecha_nr = helper.current_fecha_nr
     fecha_location = helper.current_fecha_location
-    update.message.reply_text(
+    context.bot.send_message(update.message.chat_id,
         "Recuerda que cuando estás solo en el cubículo nadie va a estar allí para decirte por quién debes "
         "votar.\nSolo estás tú, con tu conciencia.\nTú también ayudas a construir la democracia\n\n<b>Ahora "
         "al lio</b>.\nFecha %s @ %s\n\nPrimera pregunta:\n<b>%s</b> "
