@@ -22,3 +22,19 @@ tour_questions = {
 
 conn = sqlite3.connect("bot_db.sqlite")
 DECIMAL_NUMBER_PATTERN = "^[0-9]*[.,]{0,1}[0-9]*$"
+
+
+TOUR_DOMINICAL_TEMPLATE = """#tourdominical #fecha{fecha_nr} #Tradicion
+
+*Fecha {fecha_nr} @ {fecha_location} ({fecha_date})*
+
+1.Precio/Calidad
+2.Tiempo
+3.Atención
+4.Ambiente
+5.Promedio Final
+                         
+{fecha_all_strings}
+                          
+*Total: {fecha_average}*
+"""

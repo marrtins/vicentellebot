@@ -60,7 +60,7 @@ def sunday_tour_handler(update, context):
     helper = SundayTourHelper()
     fecha_nr = helper.current_fecha_nr
     fecha_location = helper.current_fecha_location
-    context.bot.send_message(update.message.chat_id,
+    update.message.reply_text(
         "Recuerda que cuando estás solo en el cubículo nadie va a estar allí para decirte por quién debes "
         "votar.\nSolo estás tú, con tu conciencia.\nTú también ayudas a construir la democracia\n\n<b>Ahora "
         "al lio</b>.\nFecha %s @ %s\n\nPrimera pregunta:\n<b>%s</b> "
@@ -105,9 +105,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
 
 def new_tour_fecha(update, context):
-    context.bot.send_message(
-        update.message.chat_id, "Numero de la nueva fecha: ", parse_mode=ParseMode.HTML
-    )
+    update.message.reply_text("Numero de la nueva fecha: ", parse_mode=ParseMode.HTML)
     return STEP1
 
 
@@ -126,12 +124,18 @@ def new_tour_fecha_step3(update, context):
     return helper.set_fecha_date(update, context)
 
 
+def fecha_result_handler(update, context):
+    helper = SundayTourHelper()
+    return helper.fecha_result_handler(update, context)
+
+
 def main():
     updater = Updater(TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
     job_queue = updater.job_queue
     dp.add_handler(CommandHandler("hi", hi))
     dp.add_handler(CommandHandler("bullmarket", bullmarket))
+    dp.add_handler(CommandHandler("fecha", fecha_result_handler))
     # dp.add_error_handler(error_callback)
 
     job_queue.run_daily(

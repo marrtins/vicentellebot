@@ -1,4 +1,4 @@
 secrets.py
 .idea/
-bot_db.sqlite
+*.sqlite
 scripts

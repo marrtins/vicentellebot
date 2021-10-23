@@ -3,6 +3,8 @@ import sqlite3
 import boto3
 
 # from common import conn
+from telegram.ext import ConversationHandler
+
 from secrets import AWS_DYNAMO_ID, AWS_REGION, AWS_DYNAMO_KEY
 
 
@@ -13,6 +15,9 @@ class CommonHelper:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.db_cursor.close()
+
+    def get_one_value_query_result(self, query, params):
+        return self.db_cursor.execute(query, params).fetchone()
 
     def set_bot_setting(self, key, value):
         sql_update_query = """update bot_settings set value = ? where key=?"""
@@ -30,3 +35,10 @@ class CommonHelper:
             aws_secret_access_key=AWS_DYNAMO_KEY,
             region_name=AWS_REGION,
         )
+
+    def format_error_message(self, update, context, error_msg):
+        context.bot.send_message(update.message.chat_id, error_msg)
+        return ConversationHandler.END
+
+    def parse_list_to_sqlite(self, lst_vals):
+        return ",".join(x for x in lst_vals)

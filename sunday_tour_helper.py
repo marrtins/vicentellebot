@@ -1,6 +1,15 @@
 from telegram import ParseMode
 from telegram.ext import ConversationHandler
-from common import logger, STEP1, STEP2, STEP3, STEP4, STEP5, tour_questions
+from common import (
+    logger,
+    STEP1,
+    STEP2,
+    STEP3,
+    STEP4,
+    STEP5,
+    tour_questions,
+    TOUR_DOMINICAL_TEMPLATE,
+)
 from common_helper import CommonHelper
 from datetime import datetime
 
@@ -70,7 +79,7 @@ class SundayTourHelper(CommonHelper):
         )
         if step == STEP5:
             return self.finish_voting(update, context)
-        context.bot.send_message(update.message.chat_id,
+        update.message.reply_text(
             "Siguiente pregunta: \n <b>%s</b> " % tour_questions[step],
             parse_mode=ParseMode.HTML,
         )
@@ -79,7 +88,7 @@ class SundayTourHelper(CommonHelper):
     def finish_voting(self, update, context):
         user_full_name, user_id = self.get_user_values_from_message(update)
         average = str(sum(self.user_values[user_id]) / 4)
-        context.bot.send_message(update.message.chat_id,
+        update.message.reply_text(
             "Gracias por tu aporte a la democracia, el promedio final es: %s" % average
         )
         self.persist_vote(
@@ -94,8 +103,7 @@ class SundayTourHelper(CommonHelper):
 
     def set_fecha_nr(self, update, context):
         self.current_fecha_nr = int(update.message.text)
-        context.bot.send_message(
-            update.message.chat_id,
+        update.message.reply_text(
             "Location de la nueva fecha: ",
             parse_mode=ParseMode.HTML,
         )
@@ -103,15 +111,14 @@ class SundayTourHelper(CommonHelper):
 
     def set_fecha_location(self, update, context):
         self.current_fecha_location = update.message.text
-        context.bot.send_message(
-            update.message.chat_id,
+        update.message.reply_text(
             "Date(DD/MM/YY) de la nueva fecha: ",
             parse_mode=ParseMode.HTML,
         )
         return STEP3
 
     def set_fecha_date(self, update, context):
-        current_fecha_date = datetime.strptime(update.message.text, "%d/%m/%y")
+        current_fecha_date = datetime.strptime(update.message.text, "%d/%m/%y").date()
         sql_insert_query = """insert into sunday_tour_metadata('fecha_nr', 'location','date') values (?, ?, ?)"""
         self.db_cursor.execute(
             sql_insert_query,
@@ -129,3 +136,85 @@ class SundayTourHelper(CommonHelper):
             parse_mode=ParseMode.HTML,
         )
         return ConversationHandler.END
+
+    def get_date_and_location_of_fecha(self, fecha_nr):
+        date_and_location_query = (
+            """select  date, location from sunday_tour_metadata where fecha_nr = ?"""
+        )
+        result = self.get_one_value_query_result(date_and_location_query, [fecha_nr])
+        return result[0], result[1]
+
+    def parse_fecha_result(self, fecha_nrs):
+        if fecha_nrs:
+            fecha_data_query = (
+                """select * from v_groupped_fecha_results where fecha_nr in (%s)"""
+                % self.parse_list_to_sqlite(fecha_nrs)
+            )
+        else:
+            fecha_data_query = """select * from v_groupped_fecha_results """
+        fecha_result_strings = {}
+        fecha_totals = {}
+        for (
+            r_fecha_nr,
+            r_user_name,
+            r_pre_cal_val,
+            r_tiem_val,
+            r_aten_val,
+            r_amb_val,
+            r_prom_val,
+        ) in self.conn.execute(fecha_data_query):
+            args_fecha = (
+                r_user_name,
+                r_pre_cal_val,
+                r_tiem_val,
+                r_aten_val,
+                r_amb_val,
+                r_prom_val,
+            )
+            fecha_result_strings.setdefault(r_fecha_nr, []).append(args_fecha)
+            fecha_totals[r_fecha_nr] = fecha_totals.get(r_fecha_nr, 0) + r_prom_val
+        full_strings = []
+
+        for fecha_nr in fecha_result_strings.keys():
+            formatted_fecha = self.format_fecha(fecha_result_strings[fecha_nr])
+            fecha_date, fecha_location = self.get_date_and_location_of_fecha(fecha_nr)
+            fecha_participants_count = len(fecha_result_strings[fecha_nr])
+            fecha_average = fecha_totals[fecha_nr] / fecha_participants_count
+            total_text = TOUR_DOMINICAL_TEMPLATE.format(
+                fecha_nr=str(fecha_nr),
+                fecha_location=fecha_location,
+                fecha_date=fecha_date,
+                fecha_all_strings=formatted_fecha,
+                fecha_average=fecha_average,
+            )
+            full_strings.append(total_text)
+        return full_strings
+
+    def format_fecha(self, rows):
+        lens = []
+        to_ret = []
+        for col in zip(*rows):
+            lens.append(max([len(str(v)) for v in col]))
+        format = "  ".join(["{:<" + str(l) + "}" for l in lens])
+        for row in rows:
+            print(format.format(*row))
+            to_ret.append(format.format(*row))
+        return "```\n" + "\n".join(x for x in to_ret) + "\n```"
+
+    def fecha_result_handler(self, update, context):
+        try:
+            fecha_nr = context.args
+        except:
+            error_msg = (
+                ":( error parsing %s - try with /fecha [fecha_nr] for specific fecha or /fecha for all fechas"
+                % str(context.args)
+            )
+            return self.format_error_message(update, context, error_msg)
+
+        results = self.parse_fecha_result(fecha_nr)
+        for result_st in results:
+            context.bot.send_message(
+                update.message.chat_id,
+                result_st,
+                parse_mode=ParseMode.MARKDOWN,
+            )
