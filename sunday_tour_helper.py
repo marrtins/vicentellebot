@@ -197,7 +197,6 @@ class SundayTourHelper(CommonHelper):
             lens.append(max([len(str(v)) for v in col]))
         format = "  ".join(["{:<" + str(l) + "}" for l in lens])
         for row in rows:
-            print(format.format(*row))
             to_ret.append(format.format(*row))
         return "```\n" + "\n".join(x for x in to_ret) + "\n```"
 
