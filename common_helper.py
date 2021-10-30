@@ -36,8 +36,11 @@ class CommonHelper:
             region_name=AWS_REGION,
         )
 
-    def format_error_message(self, update, context, error_msg):
-        context.bot.send_message(update.message.chat_id, error_msg)
+    def format_error_message(self, update, context, error_msg, exception=None):
+        msg_to_send = error_msg
+        if exception:
+            msg_to_send = '{} || exception: {}'.format(error_msg, exception)
+        context.bot.send_message(update.message.chat_id, msg_to_send)
         return ConversationHandler.END
 
     def parse_list_to_sqlite(self, lst_vals):

@@ -87,9 +87,9 @@ class SundayTourHelper(CommonHelper):
 
     def finish_voting(self, update, context):
         user_full_name, user_id = self.get_user_values_from_message(update)
-        average = str(sum(self.user_values[user_id]) / 4)
+        average = sum(self.user_values[user_id]) / 4
         update.message.reply_text(
-            "Gracias por tu aporte a la democracia, el promedio final es: %s" % average
+            "Gracias por tu aporte a la democracia, el promedio final es: %s" % str(average)
         )
         self.persist_vote(
             self.current_fecha_nr, user_full_name, "Promedio Final", average
@@ -203,14 +203,14 @@ class SundayTourHelper(CommonHelper):
     def fecha_result_handler(self, update, context):
         try:
             fecha_nr = context.args
-        except:
+            results = self.parse_fecha_result(fecha_nr)
+        except Exception as e:
             error_msg = (
-                ":( error parsing %s - try with /fecha [fecha_nr] for specific fecha or /fecha for all fechas"
-                % str(context.args)
+                ":( error parsing in fecha_result_handler - try with /fecha [fecha_nr] for specific fecha or /fecha for all fechas"
             )
-            return self.format_error_message(update, context, error_msg)
+            return self.format_error_message(update, context, error_msg, e)
 
-        results = self.parse_fecha_result(fecha_nr)
+
         for result_st in results:
             context.bot.send_message(
                 update.message.chat_id,
