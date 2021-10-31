@@ -1,4 +1,4 @@
-from telegram import ParseMode, ReplyKeyboardMarkup, Update
+from telegram import ParseMode, ReplyKeyboardMarkup, Update, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler, CallbackContext
 from common import (
     logger,
@@ -242,7 +242,7 @@ class SundayTourHelper(CommonHelper):
         reply_keyboard = [["Eh", "Como", "Que", "No otorgó", "No fue pedido", "Otro"]]
         update.message.reply_text(
             "Palabra magica otorgada en la fecha %s? " % fecha_nr,
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, selective=True),
         )
         return STEP2
 
@@ -255,5 +255,6 @@ class SundayTourHelper(CommonHelper):
             "Palabra Otorgada %s, por la fecha %s ha sido registrada"
             % (palabra_otorgada, fecha),
             parse_mode=ParseMode.HTML,
+            reply_markup=ReplyKeyboardRemove()
         )
         return ConversationHandler.END
