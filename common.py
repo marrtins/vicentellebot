@@ -44,3 +44,12 @@ Otorgó palabra: *{otorgo_palabra}*
 DIO_EH_FECHA = "DIO_EH_FECHA_KEY"
 COMMON_USER_NAME = "COMMON"
 DIO_EH_CATEGORY = "Palabra Magica"
+
+
+BOT_COMMANDS = [
+    ("bullmarket", "una regia foto de maslata y el deseo de bullmarket total"),
+    ("fecha", "fecha [fecha_nr] para resultado de una o todas las fechas"),
+    ("tour", "para agregar los resultados de la fecha vigente"),
+    ("newfecha", "para setear y dar comienzo a una nueva fecha"),
+    ("diouneh", "para agregar el eh de la fecha vigente"),
+]

@@ -4,7 +4,7 @@ import random
 
 import pytz
 import telegram.ext
-from telegram import ParseMode, Update, ReplyKeyboardRemove
+from telegram import ParseMode, Update, ReplyKeyboardRemove, BotCommand
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -219,6 +219,12 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+
+    commands = [
+        BotCommand(cmd_trigger, cmd_desc) for cmd_trigger, cmd_desc in BOT_COMMANDS
+    ]
+    bot = updater.bot
+    bot.set_my_commands(commands)
 
     updater.dispatcher.add_handler(tour_metadata_handler)
     updater.dispatcher.add_handler(dio_eh_handler)
