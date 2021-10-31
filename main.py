@@ -13,16 +13,21 @@ from telegram.ext import (
     Filters,
     CallbackContext,
 )
+
+from common_helper import CommonHelper
 from secrets import TELEGRAM_TOKEN, VALENCIA_TIO_ID
 from sunday_tour_helper import SundayTourHelper
 from common import *
 
 
-def error_callback(update, context):
-    logger.warning('Update "%s" caused error "%s"', update, context.error)
+def error_callback(update: Update, context: CallbackContext):
+    error_msg = 'Update "%s" caused error "%s"' % (update, context.error)
+    logger.error(error_msg)
+    helper = CommonHelper()
+    helper.format_error_message(update, context, error_msg)
 
 
-def hi(update, context):
+def hi(update: Update, context: CallbackContext):
     user_to_reply = update.effective_user.first_name
     context.bot.send_message(
         update.message.chat_id,
@@ -32,7 +37,7 @@ def hi(update, context):
     )
 
 
-def bullmarket(update, context):
+def bullmarket(update: Update, context: CallbackContext):
     user_to_reply = update.effective_user.first_name
     photo_caption = (
         "%s, ¡El Bull Market es Total, celebremos cantemos bailemos!" % user_to_reply
@@ -56,7 +61,7 @@ def good_morning_job(context: telegram.ext.CallbackContext):
         )
 
 
-def sunday_tour_handler(update, context):
+def sunday_tour_handler(update: Update, context: CallbackContext):
     helper = SundayTourHelper()
     fecha_nr = helper.current_fecha_nr
     fecha_location = helper.current_fecha_location
@@ -104,29 +109,44 @@ def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 
-def new_tour_fecha(update, context):
+def new_tour_fecha(update: Update, context: CallbackContext):
     update.message.reply_text("Numero de la nueva fecha: ", parse_mode=ParseMode.HTML)
     return STEP1
 
 
-def new_tour_fecha_step1(update, context):
+def new_tour_fecha_step1(update: Update, context: CallbackContext):
     helper = SundayTourHelper()
     return helper.set_fecha_nr(update, context)
 
 
-def new_tour_fecha_step2(update, context):
+def new_tour_fecha_step2(update: Update, context: CallbackContext):
     helper = SundayTourHelper()
     return helper.set_fecha_location(update, context)
 
 
-def new_tour_fecha_step3(update, context):
+def new_tour_fecha_step3(update: Update, context: CallbackContext):
     helper = SundayTourHelper()
     return helper.set_fecha_date(update, context)
 
 
-def fecha_result_handler(update, context):
+def fecha_result_handler(update: Update, context: CallbackContext):
     helper = SundayTourHelper()
     return helper.fecha_result_handler(update, context)
+
+
+def dioeh_handler_step0(update: Update, context: CallbackContext):
+    helper = SundayTourHelper()
+    return helper.dioeh_handler_step0(update, context)
+
+
+def dioeh_handler_step1(update: Update, context: CallbackContext):
+    helper = SundayTourHelper()
+    return helper.dioeh_handler_step1(update, context)
+
+
+def dioeh_handler_step2(update: Update, context: CallbackContext):
+    helper = SundayTourHelper()
+    return helper.dioeh_handler_step2(update, context)
 
 
 def main():
@@ -136,7 +156,7 @@ def main():
     dp.add_handler(CommandHandler("hi", hi))
     dp.add_handler(CommandHandler("bullmarket", bullmarket))
     dp.add_handler(CommandHandler("fecha", fecha_result_handler))
-    # dp.add_error_handler(error_callback)
+    dp.add_error_handler(error_callback)
 
     job_queue.run_daily(
         good_morning_job,
@@ -186,7 +206,22 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+
+    dio_eh_handler = ConversationHandler(
+        entry_points=[CommandHandler("diouneh", dioeh_handler_step0)],
+        states={
+            STEP1: [
+                MessageHandler(Filters.text, dioeh_handler_step1, pass_user_data=True)
+            ],
+            STEP2: [
+                MessageHandler(Filters.text, dioeh_handler_step2, pass_user_data=True)
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+
     updater.dispatcher.add_handler(tour_metadata_handler)
+    updater.dispatcher.add_handler(dio_eh_handler)
 
     updater.start_polling()
     updater.idle()

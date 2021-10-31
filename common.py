@@ -35,6 +35,12 @@ TOUR_DOMINICAL_TEMPLATE = """#tourdominical #fecha{fecha_nr} #Tradicion
 5.Promedio Final
                          
 {fecha_all_strings}
+
+Otorgó palabra: *{otorgo_palabra}*
                           
 *Total: {fecha_average}*
 """
+
+DIO_EH_FECHA = "DIO_EH_FECHA_KEY"
+COMMON_USER_NAME = "COMMON"
+DIO_EH_CATEGORY = "Palabra Magica"

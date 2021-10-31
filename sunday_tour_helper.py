@@ -1,5 +1,5 @@
-from telegram import ParseMode
-from telegram.ext import ConversationHandler
+from telegram import ParseMode, ReplyKeyboardMarkup, Update
+from telegram.ext import ConversationHandler, CallbackContext
 from common import (
     logger,
     STEP1,
@@ -9,6 +9,9 @@ from common import (
     STEP5,
     tour_questions,
     TOUR_DOMINICAL_TEMPLATE,
+    DIO_EH_FECHA,
+    COMMON_USER_NAME,
+    DIO_EH_CATEGORY,
 )
 from common_helper import CommonHelper
 from datetime import datetime
@@ -85,11 +88,12 @@ class SundayTourHelper(CommonHelper):
         )
         return step
 
-    def finish_voting(self, update, context):
+    def finish_voting(self, update: Update, context: CallbackContext):
         user_full_name, user_id = self.get_user_values_from_message(update)
         average = sum(self.user_values[user_id]) / 4
         update.message.reply_text(
-            "Gracias por tu aporte a la democracia, el promedio final es: %s" % str(average)
+            "Gracias por tu aporte a la democracia, el promedio final es: %s"
+            % str(average)
         )
         self.persist_vote(
             self.current_fecha_nr, user_full_name, "Promedio Final", average
@@ -101,7 +105,7 @@ class SundayTourHelper(CommonHelper):
         self.db_cursor.execute(sql_insert_query, (fecha_nr, user_name, category, value))
         self.conn.commit()
 
-    def set_fecha_nr(self, update, context):
+    def set_fecha_nr(self, update: Update, context: CallbackContext):
         self.current_fecha_nr = int(update.message.text)
         update.message.reply_text(
             "Location de la nueva fecha: ",
@@ -109,7 +113,7 @@ class SundayTourHelper(CommonHelper):
         )
         return STEP2
 
-    def set_fecha_location(self, update, context):
+    def set_fecha_location(self, update: Update, context: CallbackContext):
         self.current_fecha_location = update.message.text
         update.message.reply_text(
             "Date(DD/MM/YY) de la nueva fecha: ",
@@ -117,7 +121,7 @@ class SundayTourHelper(CommonHelper):
         )
         return STEP3
 
-    def set_fecha_date(self, update, context):
+    def set_fecha_date(self, update: Update, context: CallbackContext):
         current_fecha_date = datetime.strptime(update.message.text, "%d/%m/%y").date()
         sql_insert_query = """insert into sunday_tour_metadata('fecha_nr', 'location','date') values (?, ?, ?)"""
         self.db_cursor.execute(
@@ -143,6 +147,17 @@ class SundayTourHelper(CommonHelper):
         )
         result = self.get_one_value_query_result(date_and_location_query, [fecha_nr])
         return result[0], result[1]
+
+    def get_otorgo_palabra(self, fecha_nr):
+        otorgo_value_query = (
+            """select value from sunday_tour_values where fecha_nr=? and category=?"""
+        )
+        result = self.get_one_value_query_result(
+            otorgo_value_query, [fecha_nr, DIO_EH_CATEGORY]
+        )
+        if result:
+            return result[0]
+        return "No Value"
 
     def parse_fecha_result(self, fecha_nrs):
         if fecha_nrs:
@@ -180,11 +195,13 @@ class SundayTourHelper(CommonHelper):
             fecha_date, fecha_location = self.get_date_and_location_of_fecha(fecha_nr)
             fecha_participants_count = len(fecha_result_strings[fecha_nr])
             fecha_average = fecha_totals[fecha_nr] / fecha_participants_count
+            otorgo_palabra = self.get_otorgo_palabra(fecha_nr)
             total_text = TOUR_DOMINICAL_TEMPLATE.format(
                 fecha_nr=str(fecha_nr),
                 fecha_location=fecha_location,
                 fecha_date=fecha_date,
                 fecha_all_strings=formatted_fecha,
+                otorgo_palabra=otorgo_palabra,
                 fecha_average=fecha_average,
             )
             full_strings.append(total_text)
@@ -200,16 +217,13 @@ class SundayTourHelper(CommonHelper):
             to_ret.append(format.format(*row))
         return "```\n" + "\n".join(x for x in to_ret) + "\n```"
 
-    def fecha_result_handler(self, update, context):
+    def fecha_result_handler(self, update: Update, context: CallbackContext):
         try:
             fecha_nr = context.args
             results = self.parse_fecha_result(fecha_nr)
         except Exception as e:
-            error_msg = (
-                ":( error parsing in fecha_result_handler - try with /fecha [fecha_nr] for specific fecha or /fecha for all fechas"
-            )
+            error_msg = ":( error parsing in fecha_result_handler - try with /fecha [fecha_nr] for specific fecha or /fecha for all fechas"
             return self.format_error_message(update, context, error_msg, e)
-
 
         for result_st in results:
             context.bot.send_message(
@@ -217,3 +231,29 @@ class SundayTourHelper(CommonHelper):
                 result_st,
                 parse_mode=ParseMode.MARKDOWN,
             )
+
+    def dioeh_handler_step0(self, update: Update, context: CallbackContext):
+        update.message.reply_text("Dio un eh? Seleccione fecha")
+        return STEP1
+
+    def dioeh_handler_step1(self, update: Update, context: CallbackContext):
+        fecha_nr = int(update.message.text)
+        context.chat_data[DIO_EH_FECHA] = fecha_nr
+        reply_keyboard = [["Eh", "Como", "Que", "No otorgó", "No fue pedido", "Otro"]]
+        update.message.reply_text(
+            "Palabra magica otorgada en la fecha %s? " % fecha_nr,
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+        )
+        return STEP2
+
+    def dioeh_handler_step2(self, update: Update, context: CallbackContext):
+        fecha = context.chat_data[DIO_EH_FECHA]
+        palabra_otorgada = update.message.text
+        self.persist_vote(fecha, COMMON_USER_NAME, DIO_EH_CATEGORY, palabra_otorgada)
+        del context.chat_data[DIO_EH_FECHA]
+        update.message.reply_text(
+            "Palabra Otorgada %s, por la fecha %s ha sido registrada"
+            % (palabra_otorgada, fecha),
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
